@@ -10,26 +10,6 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     try {
-      // Check if Firebase is properly initialized
-      const firebaseApiKey = import.meta.env.VITE_FIREBASE_API_KEY;
-      const firebaseProjectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
-
-      if (!firebaseApiKey || firebaseApiKey === 'your_api_key_here') {
-        setError(
-          "Firebase API key not configured. Please add your Firebase credentials to .env file."
-        );
-        setLoading(false);
-        return;
-      }
-
-      if (!firebaseProjectId || firebaseProjectId === 'your_project_id_here') {
-        setError(
-          "Firebase Project ID not configured. Please add your Firebase credentials to .env file."
-        );
-        setLoading(false);
-        return;
-      }
-
       const unsubscribe = subscribeToAuthState((authUser) => {
         setUser(authUser);
         setLoading(false);
