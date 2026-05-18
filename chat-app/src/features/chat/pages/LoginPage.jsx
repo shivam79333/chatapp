@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { signIn } from "../../../lib/authService";
 
-export default function LoginPage() {
+export default function LoginPage({ onSwitchToSignUp }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -75,9 +75,12 @@ export default function LoginPage() {
         <div className="mt-6 text-center text-gray-600">
           <p>
             Don't have an account?{" "}
-            <a href="/signup" className="text-blue-500 hover:underline font-semibold">
+            <button 
+              onClick={onSwitchToSignUp}
+              className="text-blue-500 hover:underline font-semibold bg-none border-none cursor-pointer"
+            >
               Sign up
-            </a>
+            </button>
           </p>
         </div>
       </div>

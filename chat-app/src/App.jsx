@@ -35,9 +35,9 @@ function AppContent() {
 
   if (!isAuthenticated) {
     return currentPage === 'login' ? (
-      <LoginPage />
+      <LoginPage onSwitchToSignUp={() => setCurrentPage('signup')} />
     ) : (
-      <SignUpPage />
+      <SignUpPage onSwitchToLogin={() => setCurrentPage('login')} />
     )
   }
 
