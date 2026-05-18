@@ -10,78 +10,18 @@ import { auth } from "./firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "./firebase";
 
-// Sign up with email and password
-export const signUp = async (email, password, displayName) => {
-  try {
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
-    const user = userCredential.user;
-
-    // Update user profile with display name
-    if (displayName) {
-      await updateProfile(user, {
-        displayName,
-      });
-    }
-
-    // Create user document in Firestore
-    await setDoc(doc(db, "users", user.uid), {
-      uid: user.uid,
-      email: user.email,
-      displayName: displayName || "",
-      photoURL: user.photoURL || "",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    return user;
-  } catch (error) {
-    console.error("Error signing up:", error);
-    throw error;
-  }
-};
-
-// Sign in with email and password
-export const signIn = async (email, password) => {
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return userCredential.user;
-  } catch (error) {
-    console.error("Error signing in:", error);
-    throw error;
-  }
-};
-
-// Sign out
-export const logOut = async () => {
-  try {
-    await signOut(auth);
-  } catch (error) {
-    console.error("Error signing out:", error);
-    throw error;
-  }
-};
-
-// Send password reset email
-export const resetPassword = async (email) => {
-  try {
-    await sendPasswordResetEmail(auth, email);
-  } catch (error) {
-    console.error("Error sending password reset email:", error);
-    throw error;
-  }
-};
-
-// Get current user
-export const getCurrentUser = () => {
-  return auth.currentUser;
-};
+// Validate that auth is initialized
+if (!auth) {
+  console.error("❌ Firebase Auth is not initialized. Check your .env file credentials.");
+}
 
 // Listen to auth state changes
 export const subscribeToAuthState = (callback) => {
+  if (!auth) {
+    callback(null);
+    return () => {};
+  }
+
   const unsubscribe = onAuthStateChanged(auth, async (user) => {
     if (user) {
       // Get user data from Firestore

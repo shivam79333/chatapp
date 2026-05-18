@@ -4,7 +4,6 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
@@ -14,9 +13,10 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
 };
 
-console.log("Firebase Config:", {
+console.log("🔥 Firebase Config loaded:", {
   projectId: firebaseConfig.projectId,
   authDomain: firebaseConfig.authDomain,
+  appId: firebaseConfig.appId?.substring(0, 20) + "...",
 });
 
 let app;
@@ -26,15 +26,19 @@ let auth;
 try {
   // Initialize Firebase
   app = initializeApp(firebaseConfig);
+  console.log("✅ Firebase app initialized");
 
   // Initialize Firestore
   db = getFirestore(app);
+  console.log("✅ Firestore initialized");
 
   // Initialize Firebase Authentication
   auth = getAuth(app);
+  console.log("✅ Firebase Auth initialized");
 } catch (error) {
-  console.error("Firebase initialization error:", error);
+  console.error("❌ Firebase initialization failed:", error);
+  console.error("Firebase Config was:", firebaseConfig);
 }
 
-export { db, auth };
+export { db, auth, app };
 export default app;
