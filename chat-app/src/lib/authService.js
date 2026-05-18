@@ -18,6 +18,10 @@ if (!auth) {
 // Sign up with email and password
 export const signUp = async (email, password, displayName) => {
   try {
+    if (!auth) {
+      throw new Error("Firebase is not initialized. Please check your .env file.");
+    }
+
     const userCredential = await createUserWithEmailAndPassword(
       auth,
       email,
@@ -33,14 +37,16 @@ export const signUp = async (email, password, displayName) => {
     }
 
     // Create user document in Firestore
-    await setDoc(doc(db, "users", user.uid), {
-      uid: user.uid,
-      email: user.email,
-      displayName: displayName || "",
-      photoURL: user.photoURL || "",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    if (db) {
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        email: user.email,
+        displayName: displayName || "",
+        photoURL: user.photoURL || "",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    }
 
     return user;
   } catch (error) {
