@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import ChatPage from '../features/chat/pages/ChatPage'
+import ChatPage from './features/chat/pages/ChatPage'
 
 function App() {
   const [username, setUsername] = useState(null)
