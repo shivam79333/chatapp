@@ -6,6 +6,7 @@ import ChatHeader from './ChatHeader'
 import MessageInput from './MessageInput'
 import MessageList from './MessageList'
 import RoomSidebar from './RoomSidebar'
+import UsernameModal from './UsernameModal'
 
 function createRoomId(name) {
   return name
@@ -15,8 +16,9 @@ function createRoomId(name) {
     .replace(/^-|-$/g, '')
 }
 
-function ChatLayout() {
+function ChatLayout({ username: initialUsername, onNeedUsername }) {
   const socket = useMemo(() => createChatSocket(), [])
+  const [username, setUsername] = useState(initialUsername)
   const [rooms, setRooms] = useState(DEFAULT_ROOMS)
   const [currentRoomId, setCurrentRoomId] = useState('general')
   const [messagesByRoom, setMessagesByRoom] = useState({})
@@ -110,32 +112,39 @@ function ChatLayout() {
   function handleSendMessage(text) {
     socket.emit(SOCKET_EVENTS.SEND_MESSAGE, {
       text,
-      sender: 'Guest User',
+      sender: username,
       roomId: currentRoomId,
     })
   }
 
+  function handleSetUsername(newUsername) {
+    setUsername(newUsername)
+  }
+
   return (
-    <main className="grid h-screen min-h-[640px] bg-[#313338] text-zinc-100 md:min-h-screen md:grid-cols-[280px_minmax(0,1fr)]">
-      <RoomSidebar
-        currentRoomId={currentRoomId}
-        onCreateRoom={handleCreateRoom}
-        onJoinRoom={handleJoinRoom}
-        rooms={rooms}
-      />
-      <section
-        className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto]"
-        aria-label="Chat room"
-      >
-        <ChatHeader room={currentRoom} />
-        <MessageList messages={messages} room={currentRoom} />
-        <MessageInput
-          connected={connected}
-          onSendMessage={handleSendMessage}
-          roomName={currentRoom.name}
+    <>
+      {!username && <UsernameModal onConfirm={handleSetUsername} />}
+      <main className="grid h-screen min-h-[640px] bg-[#313338] text-zinc-100 md:min-h-screen md:grid-cols-[280px_minmax(0,1fr)]">
+        <RoomSidebar
+          currentRoomId={currentRoomId}
+          onCreateRoom={handleCreateRoom}
+          onJoinRoom={handleJoinRoom}
+          rooms={rooms}
         />
-      </section>
-    </main>
+        <section
+          className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto]"
+          aria-label="Chat room"
+        >
+          <ChatHeader room={currentRoom} />
+          <MessageList messages={messages} room={currentRoom} />
+          <MessageInput
+            connected={connected}
+            onSendMessage={handleSendMessage}
+            roomName={currentRoom.name}
+          />
+        </section>
+      </main>
+    </>
   )
 }
 
