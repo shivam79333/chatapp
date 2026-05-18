@@ -9,12 +9,38 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const unsubscribe = subscribeToAuthState((authUser) => {
-      setUser(authUser);
-      setLoading(false);
-    });
+    try {
+      // Check if Firebase is properly initialized
+      const firebaseApiKey = import.meta.env.VITE_FIREBASE_API_KEY;
+      const firebaseProjectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
 
-    return () => unsubscribe();
+      if (!firebaseApiKey || firebaseApiKey === 'your_api_key_here') {
+        setError(
+          "Firebase API key not configured. Please add your Firebase credentials to .env file."
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (!firebaseProjectId || firebaseProjectId === 'your_project_id_here') {
+        setError(
+          "Firebase Project ID not configured. Please add your Firebase credentials to .env file."
+        );
+        setLoading(false);
+        return;
+      }
+
+      const unsubscribe = subscribeToAuthState((authUser) => {
+        setUser(authUser);
+        setLoading(false);
+      });
+
+      return () => unsubscribe();
+    } catch (err) {
+      console.error("Auth initialization error:", err);
+      setError(err.message || "Failed to initialize authentication");
+      setLoading(false);
+    }
   }, []);
 
   const value = {
