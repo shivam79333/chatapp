@@ -15,6 +15,9 @@ function MessageInput({ connected, onSendMessage, onTyping, roomName }) {
 
     onSendMessage(trimmedMessage)
     setMessage('')
+    if (onTyping) {
+      onTyping('stop')
+    }
   }
 
   function handleMessageChange(event) {
@@ -26,7 +29,7 @@ function MessageInput({ connected, onSendMessage, onTyping, roomName }) {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
       typingTimeoutRef.current = setTimeout(() => {
         if (onTyping) onTyping('stop')
-      }, 2000)
+      }, 3000)
     } else if (!newMessage.trim() && onTyping) {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
       onTyping('stop')

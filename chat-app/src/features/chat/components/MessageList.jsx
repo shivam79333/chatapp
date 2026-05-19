@@ -35,9 +35,11 @@ function MessageList({ messages, room, typingUsers }) {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-baseline gap-2">
                 <h3 className="text-sm font-semibold text-zinc-300">
-                  {typingUsers.map((u) => u.sender).join(', ')}
+                  {typingUsers.map((u) => u.displayName).join(', ')}
                 </h3>
-                <span className="text-xs text-zinc-500">is typing...</span>
+                <span className="text-xs text-zinc-500">
+                  {typingUsers.length === 1 ? 'is' : 'are'} typing...
+                </span>
               </div>
             </div>
           </div>

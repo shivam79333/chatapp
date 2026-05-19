@@ -10,7 +10,9 @@ import {
   ensureDefaultRoomsForUser,
   ensureUserInRoom,
   sendRoomMessage,
+  setUserTyping,
   subscribeToRoomMessages,
+  subscribeToTypingUsers,
   subscribeToUserRooms,
 } from '../services/chatFirestore'
 
@@ -45,12 +47,13 @@ function ChatLayout({ user, onLogout }) {
   const [currentRoomId, setCurrentRoomId] = useState('general')
   const [messagesByRoom, setMessagesByRoom] = useState({})
   const [userCountByRoom, setUserCountByRoom] = useState({})
+  const [typingUsersByRoom, setTypingUsersByRoom] = useState({})
   const connected = Boolean(user?.uid)
 
   const currentRoom =
     rooms.find((room) => room.id === currentRoomId) || DEFAULT_ROOMS[0]
   const messages = messagesByRoom[currentRoomId] || []
-  const typingUsers = []
+  const typingUsers = typingUsersByRoom[currentRoomId] || []
   const userCount = userCountByRoom[currentRoomId] || 1
 
   useEffect(() => {
@@ -119,7 +122,7 @@ function ChatLayout({ user, onLogout }) {
       console.error(`Failed to join room ${currentRoomId} for ${identity.uid}:`, error)
     })
 
-    const unsubscribe = subscribeToRoomMessages(currentRoomId, (roomMessages) => {
+    const messageUnsubscribe = subscribeToRoomMessages(currentRoomId, (roomMessages) => {
       setMessagesByRoom((currentMessages) => ({
         ...currentMessages,
         [currentRoomId]: roomMessages.map((message) => ({
@@ -129,8 +132,16 @@ function ChatLayout({ user, onLogout }) {
       }))
     })
 
+    const typingUnsubscribe = subscribeToTypingUsers(currentRoomId, (typingUsers) => {
+      setTypingUsersByRoom((current) => ({
+        ...current,
+        [currentRoomId]: typingUsers.filter((u) => u.userId !== identity.uid),
+      }))
+    })
+
     return () => {
-      unsubscribe()
+      messageUnsubscribe()
+      typingUnsubscribe()
     }
   }, [currentRoomId, user, username])
 
@@ -212,6 +223,19 @@ function ChatLayout({ user, onLogout }) {
           <MessageInput
             connected={connected}
             onSendMessage={handleSendMessage}
+            onTyping={(action) => {
+              const identity = buildUserIdentity(user, username)
+              if (identity) {
+                setUserTyping(
+                  currentRoomId,
+                  identity.uid,
+                  identity.userName,
+                  action === 'start'
+                ).catch((error) => {
+                  console.error('Failed to update typing status:', error)
+                })
+              }
+            }}
             roomName={currentRoom.name}
           />
         </section>
