@@ -19,6 +19,7 @@ function joinOnlyRoom(socket, roomId) {
 
 export function registerSocketHandlers(io) {
   const messageService = createMessageService()
+  const userTyping = new Map()
 
   io.on(SOCKET_EVENTS.CONNECT, (socket) => {
     console.log(`User connected: ${socket.id}`)
@@ -46,6 +47,7 @@ export function registerSocketHandlers(io) {
 
       joinOnlyRoom(socket, roomId)
       socket.emit(SOCKET_EVENTS.ROOM_JOINED, roomId)
+      broadcastUserCount(io, roomId)
 
       try {
         const messages = await messageService.getRoomMessages(roomId)
@@ -74,13 +76,50 @@ export function registerSocketHandlers(io) {
         })
 
         io.to(roomId).emit(SOCKET_EVENTS.RECEIVE_MESSAGE, message)
+        userTyping.delete(socket.id)
+        io.to(roomId).emit(SOCKET_EVENTS.TYPING_STOP, { userId: socket.id })
       } catch (error) {
         console.error(`Failed to save message for room ${roomId}:`, error)
       }
     })
 
+    socket.on(SOCKET_EVENTS.TYPING_START, (payload) => {
+      const roomId = payload?.roomId || 'general'
+      if (!rooms.has(roomId)) return
+
+      userTyping.set(socket.id, {
+        userId: socket.id,
+        sender: payload.sender || 'User',
+        roomId,
+      })
+
+      io.to(roomId).emit(SOCKET_EVENTS.TYPING_START, {
+        userId: socket.id,
+        sender: payload.sender || 'User',
+      })
+    })
+
+    socket.on(SOCKET_EVENTS.TYPING_STOP, (payload) => {
+      const roomId = payload?.roomId || 'general'
+      userTyping.delete(socket.id)
+      io.to(roomId).emit(SOCKET_EVENTS.TYPING_STOP, { userId: socket.id })
+    })
+
     socket.on(SOCKET_EVENTS.DISCONNECT, () => {
       console.log(`User disconnected: ${socket.id}`)
+      userTyping.delete(socket.id)
+
+      for (const room of socket.rooms) {
+        if (room !== socket.id) {
+          broadcastUserCount(io, room)
+        }
+      }
     })
   })
+}
+
+function broadcastUserCount(io, roomId) {
+  const room = io.sockets.adapter.rooms.get(roomId)
+  const userCount = room ? room.size : 0
+  io.to(roomId).emit('room:usercount', { roomId, count: userCount })
 }

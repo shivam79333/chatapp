@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
-function MessageInput({ connected, onSendMessage, roomName }) {
+function MessageInput({ connected, onSendMessage, onTyping, roomName }) {
   const [message, setMessage] = useState('')
+  const typingTimeoutRef = useRef(null)
 
   function handleSubmit(event) {
     event.preventDefault()
@@ -16,6 +17,22 @@ function MessageInput({ connected, onSendMessage, roomName }) {
     setMessage('')
   }
 
+  function handleMessageChange(event) {
+    const newMessage = event.target.value
+    setMessage(newMessage)
+
+    if (newMessage.trim() && onTyping) {
+      onTyping('start')
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+      typingTimeoutRef.current = setTimeout(() => {
+        if (onTyping) onTyping('stop')
+      }, 2000)
+    } else if (!newMessage.trim() && onTyping) {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+      onTyping('stop')
+    }
+  }
+
   return (
     <form
       className="border-t border-zinc-950/40 bg-[#313338] px-3 py-3 sm:px-5 sm:py-4"
@@ -26,7 +43,7 @@ function MessageInput({ connected, onSendMessage, roomName }) {
           className="min-w-0 flex-1 rounded-md border border-transparent bg-[#383a40] px-4 py-3 text-sm text-zinc-200 outline-none placeholder:text-zinc-500 focus:border-indigo-400 disabled:cursor-not-allowed disabled:opacity-70"
           aria-label="Message"
           disabled={!connected}
-          onChange={(event) => setMessage(event.target.value)}
+          onChange={handleMessageChange}
           placeholder={
             connected ? `Message #${roomName}` : 'Connecting to backend...'
           }

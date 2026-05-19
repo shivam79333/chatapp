@@ -25,10 +25,14 @@ function ChatLayout({ user, onLogout }) {
   const [currentRoomId, setCurrentRoomId] = useState('general')
   const [messagesByRoom, setMessagesByRoom] = useState({})
   const [connected, setConnected] = useState(false)
+  const [typingUsersByRoom, setTypingUsersByRoom] = useState({})
+  const [userCountByRoom, setUserCountByRoom] = useState({})
 
   const currentRoom =
     rooms.find((room) => room.id === currentRoomId) || DEFAULT_ROOMS[0]
   const messages = messagesByRoom[currentRoomId] || []
+  const typingUsers = typingUsersByRoom[currentRoomId] || []
+  const userCount = userCountByRoom[currentRoomId] || 0
 
   useEffect(() => {
     socket.connect()
@@ -65,12 +69,44 @@ function ChatLayout({ user, onLogout }) {
       })
     })
 
+    socket.on(SOCKET_EVENTS.TYPING_START, ({ userId, sender, roomId }) => {
+      setTypingUsersByRoom((prev) => {
+        const room = roomId || currentRoomId
+        const existing = prev[room] || []
+        if (existing.some((u) => u.userId === userId)) return prev
+        return {
+          ...prev,
+          [room]: [...existing, { userId, sender }],
+        }
+      })
+    })
+
+    socket.on(SOCKET_EVENTS.TYPING_STOP, ({ userId }) => {
+      setTypingUsersByRoom((prev) => {
+        const updated = { ...prev }
+        for (const room in updated) {
+          updated[room] = updated[room].filter((u) => u.userId !== userId)
+        }
+        return updated
+      })
+    })
+
+    socket.on('room:usercount', ({ roomId, count }) => {
+      setUserCountByRoom((prev) => ({
+        ...prev,
+        [roomId]: count,
+      }))
+    })
+
     return () => {
       socket.off(SOCKET_EVENTS.CONNECT)
       socket.off(SOCKET_EVENTS.DISCONNECT)
       socket.off(SOCKET_EVENTS.RECEIVE_MESSAGE)
       socket.off(SOCKET_EVENTS.MESSAGE_HISTORY)
       socket.off(SOCKET_EVENTS.ROOM_CREATED)
+      socket.off(SOCKET_EVENTS.TYPING_START)
+      socket.off(SOCKET_EVENTS.TYPING_STOP)
+      socket.off('room:usercount')
       socket.disconnect()
     }
   }, [socket])
@@ -119,6 +155,19 @@ function ChatLayout({ user, onLogout }) {
     })
   }
 
+  function handleTyping(action) {
+    if (action === 'start') {
+      socket.emit(SOCKET_EVENTS.TYPING_START, {
+        sender: username,
+        roomId: currentRoomId,
+      })
+    } else if (action === 'stop') {
+      socket.emit(SOCKET_EVENTS.TYPING_STOP, {
+        roomId: currentRoomId,
+      })
+    }
+  }
+
   function handleSetUsername(newUsername) {
     setUsername(newUsername)
   }
@@ -139,11 +188,12 @@ function ChatLayout({ user, onLogout }) {
           className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto]"
           aria-label="Chat room"
         >
-          <ChatHeader room={currentRoom} />
-          <MessageList messages={messages} room={currentRoom} />
+          <ChatHeader room={currentRoom} userCount={userCount} />
+          <MessageList messages={messages} room={currentRoom} typingUsers={typingUsers} />
           <MessageInput
             connected={connected}
             onSendMessage={handleSendMessage}
+            onTyping={handleTyping}
             roomName={currentRoom.name}
           />
         </section>

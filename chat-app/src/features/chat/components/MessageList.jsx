@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react'
 import MessageBubble from './MessageBubble'
 
-function MessageList({ messages, room }) {
+function MessageList({ messages, room, typingUsers }) {
   const bottomRef = useRef(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView()
-  }, [messages])
+  }, [messages, typingUsers])
 
   return (
     <div className="min-h-0 overflow-y-auto px-3 py-5 sm:px-5 sm:py-6">
@@ -28,7 +28,23 @@ function MessageList({ messages, room }) {
           <MessageBubble key={message.id} message={message} />
         ))}
 
-        {messages.length === 0 && (
+        {typingUsers && typingUsers.length > 0 && (
+          <div className="flex gap-3 rounded-md px-2 py-1.5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-600 text-xs font-bold text-white">
+              ✎
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-baseline gap-2">
+                <h3 className="text-sm font-semibold text-zinc-300">
+                  {typingUsers.map((u) => u.sender).join(', ')}
+                </h3>
+                <span className="text-xs text-zinc-500">is typing...</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {messages.length === 0 && (!typingUsers || typingUsers.length === 0) && (
           <p className="rounded-md bg-zinc-950/10 px-3 py-2 text-sm text-zinc-400">
             No messages yet. Start the backend, open this app in two tabs, and
             send a message.
