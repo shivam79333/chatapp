@@ -1,12 +1,18 @@
-import { useEffect, useMemo, useState } from 'react'
-import { SOCKET_EVENTS } from '../../../../shared/constants/events'
+import { useEffect, useState } from 'react'
 import { DEFAULT_ROOMS } from '../../../../shared/constants/rooms'
-import { createChatSocket } from '../services/chatSocket'
 import ChatHeader from './ChatHeader'
 import MessageInput from './MessageInput'
 import MessageList from './MessageList'
 import RoomSidebar from './RoomSidebar'
 import UsernameModal from './UsernameModal'
+import {
+  createRoomForUser,
+  ensureDefaultRoomsForUser,
+  ensureUserInRoom,
+  sendRoomMessage,
+  subscribeToRoomMessages,
+  subscribeToUserRooms,
+} from '../services/chatFirestore'
 
 function createRoomId(name) {
   return name
@@ -16,162 +22,136 @@ function createRoomId(name) {
     .replace(/^-|-$/g, '')
 }
 
+function buildUserIdentity(user, username) {
+  if (!user?.uid) {
+    return null
+  }
+
+  const fallbackName = username || user.displayName || user.email?.split('@')[0] || 'User'
+
+  return {
+    uid: user.uid,
+    userName: fallbackName,
+    userDisplayName: user.displayName || fallbackName,
+    email: user.email || '',
+  }
+}
+
 function ChatLayout({ user, onLogout }) {
-  const socket = useMemo(() => createChatSocket(), [])
   const [username, setUsername] = useState(
     user?.displayName || user?.email?.split('@')[0] || ''
   )
   const [rooms, setRooms] = useState(DEFAULT_ROOMS)
   const [currentRoomId, setCurrentRoomId] = useState('general')
   const [messagesByRoom, setMessagesByRoom] = useState({})
-  const [connected, setConnected] = useState(false)
-  const [typingUsersByRoom, setTypingUsersByRoom] = useState({})
   const [userCountByRoom, setUserCountByRoom] = useState({})
+  const connected = Boolean(user?.uid)
 
   const currentRoom =
     rooms.find((room) => room.id === currentRoomId) || DEFAULT_ROOMS[0]
   const messages = messagesByRoom[currentRoomId] || []
-  const typingUsers = typingUsersByRoom[currentRoomId] || []
-  const userCount = userCountByRoom[currentRoomId] || 0
+  const typingUsers = []
+  const userCount = userCountByRoom[currentRoomId] || 1
 
   useEffect(() => {
-    const handleConnect = () => {
-      setConnected(true)
-      if (user?.uid) {
-        socket.emit(SOCKET_EVENTS.GET_USER_ROOMS, user.uid)
-      }
+    const identity = buildUserIdentity(user, username)
+    if (!identity) {
+      return undefined
     }
 
-    const handleDisconnect = () => {
-      setConnected(false)
-    }
+    ensureDefaultRoomsForUser(identity).catch((error) => {
+      console.error(`Failed to initialize default rooms for ${identity.uid}:`, error)
+    })
 
-    socket.on(SOCKET_EVENTS.CONNECT, handleConnect)
-    socket.on(SOCKET_EVENTS.DISCONNECT, handleDisconnect)
+    const unsubscribe = subscribeToUserRooms(identity.uid, (userRooms) => {
+      const uniqueRooms = new Map()
 
-    socket.on(SOCKET_EVENTS.USER_ROOMS, (userRooms) => {
-      if (userRooms && userRooms.length > 0) {
-        const uniqueRooms = new Map()
+      DEFAULT_ROOMS.forEach((room) => {
+        uniqueRooms.set(room.id, room)
+      })
 
-        DEFAULT_ROOMS.forEach((room) => {
-          uniqueRooms.set(room.id, room)
+      userRooms.forEach((room) => {
+        uniqueRooms.set(room.id, {
+          id: room.id,
+          name: room.name || room.id,
+          description: room.description || 'User room',
         })
+      })
+
+      const nextRooms = Array.from(uniqueRooms.values())
+      setRooms(nextRooms)
+      setCurrentRoomId((previousRoomId) => {
+        if (nextRooms.some((room) => room.id === previousRoomId)) {
+          return previousRoomId
+        }
+
+        return nextRooms[0]?.id || 'general'
+      })
+      setUserCountByRoom((previousCounts) => {
+        const nextCounts = { ...previousCounts }
 
         userRooms.forEach((room) => {
-          if (!uniqueRooms.has(room.id)) {
-            uniqueRooms.set(room.id, {
-              id: room.id,
-              name: room.name || room.id,
-              description: room.description || 'User room',
-            })
+          nextCounts[room.id] = room.memberCount || 0
+        })
+
+        DEFAULT_ROOMS.forEach((room) => {
+          if (!nextCounts[room.id]) {
+            nextCounts[room.id] = 1
           }
         })
 
-        setRooms(Array.from(uniqueRooms.values()))
-      }
-    })
-
-    socket.on(SOCKET_EVENTS.RECEIVE_MESSAGE, (message) => {
-      setMessagesByRoom((currentMessages) => ({
-        ...currentMessages,
-        [message.roomId]: [...(currentMessages[message.roomId] || []), message],
-      }))
-    })
-
-    socket.on(SOCKET_EVENTS.MESSAGE_HISTORY, ({ roomId, messages }) => {
-      setMessagesByRoom((currentMessages) => ({
-        ...currentMessages,
-        [roomId]: messages,
-      }))
-    })
-
-    socket.on(SOCKET_EVENTS.ROOM_CREATED, (room) => {
-      setRooms((currentRooms) => {
-        if (currentRooms.some((currentRoom) => currentRoom.id === room.id)) {
-          return currentRooms
-        }
-
-        return [...currentRooms, room]
+        return nextCounts
       })
     })
-
-    socket.on(SOCKET_EVENTS.TYPING_START, ({ userId, sender, roomId }) => {
-      setTypingUsersByRoom((prev) => {
-        const room = roomId || currentRoomId
-        const existing = prev[room] || []
-        if (existing.some((u) => u.userId === userId)) return prev
-        return {
-          ...prev,
-          [room]: [...existing, { userId, sender }],
-        }
-      })
-    })
-
-    socket.on(SOCKET_EVENTS.TYPING_STOP, ({ userId }) => {
-      setTypingUsersByRoom((prev) => {
-        const updated = { ...prev }
-        for (const room in updated) {
-          updated[room] = updated[room].filter((u) => u.userId !== userId)
-        }
-        return updated
-      })
-    })
-
-    socket.on('room:usercount', ({ roomId, count }) => {
-      setUserCountByRoom((prev) => ({
-        ...prev,
-        [roomId]: count,
-      }))
-    })
-
-    if (socket.connected) {
-      handleConnect()
-    } else {
-      socket.connect()
-    }
 
     return () => {
-      socket.off(SOCKET_EVENTS.CONNECT, handleConnect)
-      socket.off(SOCKET_EVENTS.DISCONNECT, handleDisconnect)
-      socket.off(SOCKET_EVENTS.RECEIVE_MESSAGE)
-      socket.off(SOCKET_EVENTS.MESSAGE_HISTORY)
-      socket.off(SOCKET_EVENTS.ROOM_CREATED)
-      socket.off(SOCKET_EVENTS.TYPING_START)
-      socket.off(SOCKET_EVENTS.TYPING_STOP)
-      socket.off(SOCKET_EVENTS.USER_ROOMS)
-      socket.off('room:usercount')
-      socket.disconnect()
+      unsubscribe()
     }
-  }, [socket, user])
+  }, [user, username])
 
   useEffect(() => {
-    if (connected) {
-      socket.emit(SOCKET_EVENTS.JOIN_ROOM, {
-        roomId: currentRoomId,
-        userId: user?.uid,
-        userName: username,
-        userDisplayName: user?.displayName || username,
-      })
+    const identity = buildUserIdentity(user, username)
+    if (!identity || !currentRoomId) {
+      return undefined
     }
-  }, [connected, currentRoomId, socket, user, username])
+
+    ensureUserInRoom(currentRoomId, identity).catch((error) => {
+      console.error(`Failed to join room ${currentRoomId} for ${identity.uid}:`, error)
+    })
+
+    const unsubscribe = subscribeToRoomMessages(currentRoomId, (roomMessages) => {
+      setMessagesByRoom((currentMessages) => ({
+        ...currentMessages,
+        [currentRoomId]: roomMessages.map((message) => ({
+          ...message,
+          isOwn: message.senderId === identity.uid,
+        })),
+      }))
+    })
+
+    return () => {
+      unsubscribe()
+    }
+  }, [currentRoomId, user, username])
 
   function handleJoinRoom(roomId) {
     setCurrentRoomId(roomId)
 
-    if (connected) {
-      socket.emit(SOCKET_EVENTS.JOIN_ROOM, {
-        roomId,
-        userId: user?.uid,
-        userName: username,
-        userDisplayName: user?.displayName || username,
-      })
+    const identity = buildUserIdentity(user, username)
+    if (!identity) {
+      return
     }
+
+    ensureUserInRoom(roomId, identity).catch((error) => {
+      console.error(`Failed to join room ${roomId} for ${identity.uid}:`, error)
+    })
   }
 
-  function handleCreateRoom(roomName) {
+  async function handleCreateRoom(roomName) {
     const roomId = createRoomId(roomName)
+    const identity = buildUserIdentity(user, username)
 
-    if (!roomId || rooms.some((room) => room.id === roomId)) {
+    if (!identity || !roomId || rooms.some((room) => room.id === roomId)) {
       return
     }
 
@@ -181,29 +161,29 @@ function ChatLayout({ user, onLogout }) {
       description: 'Custom room',
     }
 
-    setRooms((currentRooms) => [...currentRooms, newRoom])
-    setCurrentRoomId(newRoom.id)
-    socket.emit(SOCKET_EVENTS.CREATE_ROOM, newRoom)
+    try {
+      await createRoomForUser(newRoom, identity)
+      setCurrentRoomId(newRoom.id)
+    } catch (error) {
+      console.error(`Failed to create room ${newRoom.id}:`, error)
+    }
   }
 
-  function handleSendMessage(text) {
-    socket.emit(SOCKET_EVENTS.SEND_MESSAGE, {
-      text,
-      sender: username,
-      roomId: currentRoomId,
-    })
-  }
+  async function handleSendMessage(text) {
+    const identity = buildUserIdentity(user, username)
+    if (!identity) {
+      return
+    }
 
-  function handleTyping(action) {
-    if (action === 'start') {
-      socket.emit(SOCKET_EVENTS.TYPING_START, {
-        sender: username,
+    try {
+      await sendRoomMessage({
+        text,
         roomId: currentRoomId,
+        sender: identity.userDisplayName,
+        senderId: identity.uid,
       })
-    } else if (action === 'stop') {
-      socket.emit(SOCKET_EVENTS.TYPING_STOP, {
-        roomId: currentRoomId,
-      })
+    } catch (error) {
+      console.error(`Failed to send message in room ${currentRoomId}:`, error)
     }
   }
 
@@ -232,7 +212,6 @@ function ChatLayout({ user, onLogout }) {
           <MessageInput
             connected={connected}
             onSendMessage={handleSendMessage}
-            onTyping={handleTyping}
             roomName={currentRoom.name}
           />
         </section>

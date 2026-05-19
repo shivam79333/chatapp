@@ -50,7 +50,7 @@ function RoomSidebar({
           </h2>
         </div>
         <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-300 md:hidden">
-          Static
+          Live
         </span>
       </div>
 

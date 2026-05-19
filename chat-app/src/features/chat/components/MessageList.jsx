@@ -19,8 +19,7 @@ function MessageList({ messages, room, typingUsers }) {
             Welcome to #{room.name.toLowerCase()}
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-            This is a static Discord-like layout. The message list is an
-            auto-scroll container, ready for realtime messages later.
+            Messages in this room are synced in real time and stored in Firestore.
           </p>
         </div>
 
@@ -46,8 +45,7 @@ function MessageList({ messages, room, typingUsers }) {
 
         {messages.length === 0 && (!typingUsers || typingUsers.length === 0) && (
           <p className="rounded-md bg-zinc-950/10 px-3 py-2 text-sm text-zinc-400">
-            No messages yet. Start the backend, open this app in two tabs, and
-            send a message.
+            No messages yet. Send one to start this room history.
           </p>
         )}
 

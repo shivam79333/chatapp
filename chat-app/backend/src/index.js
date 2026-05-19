@@ -11,6 +11,8 @@ const allowedOrigins = new Set([
   env.clientUrl,
   'http://localhost:5173',
   'http://127.0.0.1:5173',
+  'http://localhost:5176',
+  'http://127.0.0.1:5176',
 ])
 
 function isAllowedOrigin(origin) {
@@ -26,6 +28,19 @@ function isAllowedOrigin(origin) {
   }
 }
 
+function applyCorsHeaders(req, res) {
+  const origin = req.headers.origin
+  if (!origin || !isAllowedOrigin(origin)) {
+    return
+  }
+
+  res.setHeader('Access-Control-Allow-Origin', origin)
+  res.setHeader('Vary', 'Origin')
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  res.setHeader('Access-Control-Allow-Credentials', 'true')
+}
+
 const io = new Server(httpServer, {
   cors: {
     origin: (origin, callback) => {
@@ -36,7 +51,23 @@ const io = new Server(httpServer, {
       callback(new Error(`CORS blocked for origin: ${origin}`))
     },
     methods: ['GET', 'POST'],
+    credentials: true,
   },
+})
+
+app.use((req, res, next) => {
+  applyCorsHeaders(req, res)
+
+  if (req.method === 'OPTIONS') {
+    if (req.headers.origin && !isAllowedOrigin(req.headers.origin)) {
+      res.status(403).send(`CORS blocked for origin: ${req.headers.origin}`)
+      return
+    }
+    res.sendStatus(204)
+    return
+  }
+
+  next()
 })
 
 app.get('/', (req, res) => {
