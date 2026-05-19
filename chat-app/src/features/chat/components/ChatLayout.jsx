@@ -16,9 +16,11 @@ function createRoomId(name) {
     .replace(/^-|-$/g, '')
 }
 
-function ChatLayout({ username: initialUsername, onNeedUsername }) {
+function ChatLayout({ user, onLogout }) {
   const socket = useMemo(() => createChatSocket(), [])
-  const [username, setUsername] = useState(initialUsername)
+  const [username, setUsername] = useState(
+    user?.displayName || user?.email?.split('@')[0] || ''
+  )
   const [rooms, setRooms] = useState(DEFAULT_ROOMS)
   const [currentRoomId, setCurrentRoomId] = useState('general')
   const [messagesByRoom, setMessagesByRoom] = useState({})
@@ -129,7 +131,9 @@ function ChatLayout({ username: initialUsername, onNeedUsername }) {
           currentRoomId={currentRoomId}
           onCreateRoom={handleCreateRoom}
           onJoinRoom={handleJoinRoom}
+          onLogout={onLogout}
           rooms={rooms}
+          user={user}
         />
         <section
           className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto]"

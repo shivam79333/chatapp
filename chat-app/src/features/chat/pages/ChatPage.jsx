@@ -1,7 +1,12 @@
 import ChatLayout from '../components/ChatLayout'
+import { logOut } from '../../../lib/authService'
 
-function ChatPage({ username, onNeedUsername }) {
-  return <ChatLayout username={username} onNeedUsername={onNeedUsername} />
+function ChatPage({ user }) {
+  async function handleLogout() {
+    await logOut()
+  }
+
+  return <ChatLayout user={user} onLogout={handleLogout} />
 }
 
 export default ChatPage

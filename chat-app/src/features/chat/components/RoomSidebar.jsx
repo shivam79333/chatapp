@@ -1,8 +1,27 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import RoomItem from './RoomItem'
 
-function RoomSidebar({ currentRoomId, onCreateRoom, onJoinRoom, rooms }) {
+function RoomSidebar({
+  currentRoomId,
+  onCreateRoom,
+  onJoinRoom,
+  onLogout,
+  rooms,
+  user,
+}) {
   const [roomName, setRoomName] = useState('')
+  const fullName = user?.displayName?.trim() || user?.email || 'User'
+  const initials = useMemo(() => {
+    const words = fullName.split(' ').filter(Boolean)
+    if (words.length === 0) {
+      return 'U'
+    }
+
+    return words
+      .slice(0, 2)
+      .map((word) => word[0]?.toUpperCase() || '')
+      .join('')
+  }, [fullName])
 
   function handleSubmit(event) {
     event.preventDefault()
@@ -67,17 +86,24 @@ function RoomSidebar({ currentRoomId, onCreateRoom, onJoinRoom, rooms }) {
       <div className="mt-auto hidden rounded-md bg-[#232428] p-3 md:block">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-500 text-xs font-bold text-white">
-            GU
+            {initials}
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-white">
-              Guest User
+              {fullName}
             </p>
             <p className="truncate text-xs text-zinc-400">
-              Login comes later
+              {user?.email || 'Signed in'}
             </p>
           </div>
         </div>
+        <button
+          className="mt-3 w-full rounded-md bg-zinc-800 px-3 py-2 text-sm font-semibold text-zinc-100 transition hover:bg-zinc-700"
+          onClick={onLogout}
+          type="button"
+        >
+          Logout
+        </button>
       </div>
     </aside>
   )
