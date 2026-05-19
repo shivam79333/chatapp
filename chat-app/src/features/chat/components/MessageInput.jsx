@@ -24,14 +24,21 @@ function MessageInput({ connected, onSendMessage, onTyping, roomName }) {
     const newMessage = event.target.value
     setMessage(newMessage)
 
+    console.log('[MessageInput] handleMessageChange called', { newMessage: newMessage.trim(), hasOnTyping: !!onTyping })
+
     if (newMessage.trim() && onTyping) {
+      console.log('[MessageInput] Calling onTyping(start)')
       onTyping('start')
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
       typingTimeoutRef.current = setTimeout(() => {
-        if (onTyping) onTyping('stop')
+        if (onTyping) {
+          console.log('[MessageInput] Timeout - calling onTyping(stop)')
+          onTyping('stop')
+        }
       }, 3000)
     } else if (!newMessage.trim() && onTyping) {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+      console.log('[MessageInput] Empty message - calling onTyping(stop)')
       onTyping('stop')
     }
   }

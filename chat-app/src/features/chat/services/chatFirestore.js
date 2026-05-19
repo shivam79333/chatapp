@@ -182,14 +182,18 @@ export async function setUserTyping(roomId, userId, displayName, isTyping) {
   const firestore = getDb()
   const typingRef = doc(firestore, 'rooms', roomId, 'typing', userId)
 
+  console.log('[setUserTyping]', { roomId, userId, displayName, isTyping })
+
   if (isTyping) {
     await setDoc(typingRef, {
       userId,
       displayName,
       typingAt: serverTimestamp(),
     })
+    console.log('[setUserTyping] Wrote typing status for', userId)
   } else {
     await deleteDoc(typingRef)
+    console.log('[setUserTyping] Deleted typing status for', userId)
   }
 }
 
@@ -201,10 +205,13 @@ export function subscribeToTypingUsers(roomId, callback) {
     typingQuery,
     (snapshot) => {
       const now = Date.now()
+      console.log('[subscribeToTypingUsers] Got snapshot with', snapshot.docs.length, 'docs')
+      
       const typingUsers = snapshot.docs
         .filter((doc) => {
           const typingAt = doc.data().typingAt?.toDate?.()?.getTime?.() || 0
           const isStale = now - typingAt > 3000
+          console.log('[subscribeToTypingUsers] Doc:', doc.id, 'typingAt:', typingAt, 'isStale:', isStale)
           return !isStale
         })
         .map((doc) => ({
@@ -212,6 +219,7 @@ export function subscribeToTypingUsers(roomId, callback) {
           displayName: doc.data().displayName,
         }))
 
+      console.log('[subscribeToTypingUsers] Filtered typing users:', typingUsers)
       callback(typingUsers)
     },
     (error) => {
