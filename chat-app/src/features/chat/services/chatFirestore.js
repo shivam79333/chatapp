@@ -2,7 +2,9 @@ import {
   addDoc,
   arrayUnion,
   collection,
+  deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -174,4 +176,20 @@ export async function sendRoomMessage(message) {
     },
     { merge: true }
   )
+}
+
+export async function deleteRoom(roomId) {
+  const firestore = getDb()
+  
+  const messagesSnapshot = await getDocs(
+    collection(firestore, 'rooms', roomId, 'messages')
+  )
+  
+  await Promise.all(
+    messagesSnapshot.docs.map((messageDoc) =>
+      deleteDoc(messageDoc.ref)
+    )
+  )
+  
+  await deleteDoc(doc(firestore, 'rooms', roomId))
 }

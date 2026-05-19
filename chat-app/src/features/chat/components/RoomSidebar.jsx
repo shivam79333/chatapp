@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import RoomItem from './RoomItem'
+import { deleteRoom } from '../services/chatFirestore'
 
 function RoomSidebar({
   currentRoomId,
@@ -35,6 +36,17 @@ function RoomSidebar({
     setRoomName('')
   }
 
+  async function handleDeleteRoom(roomId) {
+    try {
+      await deleteRoom(roomId)
+      if (currentRoomId === roomId) {
+        onJoinRoom('general')
+      }
+    } catch (error) {
+      console.error(`Failed to delete room ${roomId}:`, error)
+    }
+  }
+
   return (
     <aside
       className="flex min-h-0 flex-col gap-4 border-b border-zinc-950/40 bg-[#2b2d31] px-3 py-3 md:border-b-0 md:border-r md:px-4 md:py-5"
@@ -59,6 +71,7 @@ function RoomSidebar({
           <RoomItem
             active={room.id === currentRoomId}
             key={room.id}
+            onDelete={handleDeleteRoom}
             onClick={() => onJoinRoom(room.id)}
             room={room}
           />
