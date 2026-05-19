@@ -9,24 +9,37 @@ function MessageBubble({ message }) {
     }).format(createdAt)
   const accentClass = message.accentClass || 'bg-indigo-500'
 
+  if (message.isOwn) {
+    return (
+      <article className="flex justify-end gap-3">
+        <div className="max-w-xs">
+          <div className="flex flex-col items-end">
+            <div className="rounded-lg bg-indigo-600 px-4 py-2">
+              <p className="text-sm leading-6 text-white">{message.text}</p>
+            </div>
+            <time className="mt-1 text-xs text-zinc-500">{time}</time>
+          </div>
+        </div>
+      </article>
+    )
+  }
+
   return (
-    <article
-      className={`flex gap-3 rounded-md px-2 py-1.5 transition hover:bg-zinc-950/10 ${
-        message.isOwn ? 'sm:bg-zinc-950/10' : ''
-      }`}
-    >
+    <article className="flex gap-3">
       <div
         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${accentClass} text-xs font-bold text-white shadow-sm`}
       >
         {initials}
       </div>
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 max-w-xs">
         <div className="flex flex-wrap items-baseline gap-2">
           <h3 className="font-semibold text-white">{message.sender}</h3>
           <time className="text-xs text-zinc-500">{time}</time>
         </div>
-        <p className="mt-1 text-sm leading-6 text-zinc-300">{message.text}</p>
+        <div className="mt-1 rounded-lg bg-zinc-700 px-4 py-2">
+          <p className="text-sm leading-6 text-zinc-100">{message.text}</p>
+        </div>
       </div>
     </article>
   )
