@@ -35,18 +35,19 @@ function ChatLayout({ user, onLogout }) {
   const userCount = userCountByRoom[currentRoomId] || 0
 
   useEffect(() => {
-    socket.connect()
-
-    socket.on(SOCKET_EVENTS.CONNECT, () => {
+    const handleConnect = () => {
       setConnected(true)
       if (user?.uid) {
         socket.emit(SOCKET_EVENTS.GET_USER_ROOMS, user.uid)
       }
-    })
+    }
 
-    socket.on(SOCKET_EVENTS.DISCONNECT, () => {
+    const handleDisconnect = () => {
       setConnected(false)
-    })
+    }
+
+    socket.on(SOCKET_EVENTS.CONNECT, handleConnect)
+    socket.on(SOCKET_EVENTS.DISCONNECT, handleDisconnect)
 
     socket.on(SOCKET_EVENTS.USER_ROOMS, (userRooms) => {
       if (userRooms && userRooms.length > 0) {
@@ -123,9 +124,15 @@ function ChatLayout({ user, onLogout }) {
       }))
     })
 
+    if (socket.connected) {
+      handleConnect()
+    } else {
+      socket.connect()
+    }
+
     return () => {
-      socket.off(SOCKET_EVENTS.CONNECT)
-      socket.off(SOCKET_EVENTS.DISCONNECT)
+      socket.off(SOCKET_EVENTS.CONNECT, handleConnect)
+      socket.off(SOCKET_EVENTS.DISCONNECT, handleDisconnect)
       socket.off(SOCKET_EVENTS.RECEIVE_MESSAGE)
       socket.off(SOCKET_EVENTS.MESSAGE_HISTORY)
       socket.off(SOCKET_EVENTS.ROOM_CREATED)
