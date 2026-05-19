@@ -14,6 +14,7 @@ function serializeMessage(doc) {
     id: doc.id,
     text: data.text,
     sender: data.sender,
+    senderDisplayName: data.senderDisplayName,
     roomId: data.roomId,
     createdAt: data.createdAt?.toDate?.().toISOString() || data.createdAt,
   }
@@ -27,6 +28,7 @@ export function createMessageService() {
       const docRef = await messageCollection(db, message.roomId).add({
         text: message.text,
         sender: message.sender,
+        senderDisplayName: message.senderDisplayName || message.sender,
         roomId: message.roomId,
         createdAt: FieldValue.serverTimestamp(),
       })

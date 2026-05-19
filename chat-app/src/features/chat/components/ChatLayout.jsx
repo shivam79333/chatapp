@@ -39,10 +39,35 @@ function ChatLayout({ user, onLogout }) {
 
     socket.on(SOCKET_EVENTS.CONNECT, () => {
       setConnected(true)
+      if (user?.uid) {
+        socket.emit(SOCKET_EVENTS.GET_USER_ROOMS, user.uid)
+      }
     })
 
     socket.on(SOCKET_EVENTS.DISCONNECT, () => {
       setConnected(false)
+    })
+
+    socket.on(SOCKET_EVENTS.USER_ROOMS, (userRooms) => {
+      if (userRooms && userRooms.length > 0) {
+        const uniqueRooms = new Map()
+
+        DEFAULT_ROOMS.forEach((room) => {
+          uniqueRooms.set(room.id, room)
+        })
+
+        userRooms.forEach((room) => {
+          if (!uniqueRooms.has(room.id)) {
+            uniqueRooms.set(room.id, {
+              id: room.id,
+              name: room.name || room.id,
+              description: room.description || 'User room',
+            })
+          }
+        })
+
+        setRooms(Array.from(uniqueRooms.values()))
+      }
     })
 
     socket.on(SOCKET_EVENTS.RECEIVE_MESSAGE, (message) => {
@@ -106,22 +131,33 @@ function ChatLayout({ user, onLogout }) {
       socket.off(SOCKET_EVENTS.ROOM_CREATED)
       socket.off(SOCKET_EVENTS.TYPING_START)
       socket.off(SOCKET_EVENTS.TYPING_STOP)
+      socket.off(SOCKET_EVENTS.USER_ROOMS)
       socket.off('room:usercount')
       socket.disconnect()
     }
-  }, [socket])
+  }, [socket, user])
 
   useEffect(() => {
     if (connected) {
-      socket.emit(SOCKET_EVENTS.JOIN_ROOM, currentRoomId)
+      socket.emit(SOCKET_EVENTS.JOIN_ROOM, {
+        roomId: currentRoomId,
+        userId: user?.uid,
+        userName: username,
+        userDisplayName: user?.displayName || username,
+      })
     }
-  }, [connected, currentRoomId, socket])
+  }, [connected, currentRoomId, socket, user, username])
 
   function handleJoinRoom(roomId) {
     setCurrentRoomId(roomId)
 
     if (connected) {
-      socket.emit(SOCKET_EVENTS.JOIN_ROOM, roomId)
+      socket.emit(SOCKET_EVENTS.JOIN_ROOM, {
+        roomId,
+        userId: user?.uid,
+        userName: username,
+        userDisplayName: user?.displayName || username,
+      })
     }
   }
 

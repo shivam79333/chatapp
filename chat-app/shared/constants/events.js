@@ -11,4 +11,6 @@ export const SOCKET_EVENTS = {
   MESSAGE_HISTORY: 'messages:history',
   TYPING_START: 'typing:start',
   TYPING_STOP: 'typing:stop',
+  GET_USER_ROOMS: 'user:rooms:get',
+  USER_ROOMS: 'user:rooms',
 }
