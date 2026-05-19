@@ -17,7 +17,14 @@ console.log("🔥 Firebase Config loaded:", {
   projectId: firebaseConfig.projectId,
   authDomain: firebaseConfig.authDomain,
   appId: firebaseConfig.appId?.substring(0, 20) + "...",
+  apiKey: firebaseConfig.apiKey ? "✓ Set" : "✗ MISSING",
 });
+
+// Debug: Log all env vars with VITE_ prefix
+console.log("📝 Environment variables check:");
+console.log("VITE_FIREBASE_API_KEY:", import.meta.env.VITE_FIREBASE_API_KEY ? "✓" : "✗");
+console.log("VITE_FIREBASE_AUTH_DOMAIN:", import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ? "✓" : "✗");
+console.log("VITE_FIREBASE_PROJECT_ID:", import.meta.env.VITE_FIREBASE_PROJECT_ID ? "✓" : "✗");
 
 let app;
 let db;
