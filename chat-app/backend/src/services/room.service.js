@@ -5,11 +5,30 @@ export function createRoomService() {
   const roomsCollection = db.collection('rooms')
 
   return {
+    async createRoom(room) {
+      try {
+        const roomRef = roomsCollection.doc(room.id)
+        await roomRef.set(
+          {
+            name: room.name,
+            description: room.description || 'Custom room',
+            updatedAt: new Date(),
+          },
+          { merge: true }
+        )
+        return { id: room.id, name: room.name, description: room.description || 'Custom room' }
+      } catch (error) {
+        console.error(`Failed to create room ${room.id}:`, error)
+        throw error
+      }
+    },
+
     async addUserToRoom(roomId, userId, userName, userDisplayName) {
       try {
         const roomRef = roomsCollection.doc(roomId)
         await roomRef.set(
           {
+            updatedAt: new Date(),
             members: {
               [userId]: {
                 userId,

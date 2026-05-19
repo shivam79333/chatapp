@@ -184,10 +184,6 @@ function ChatLayout({ user, onLogout }) {
     setRooms((currentRooms) => [...currentRooms, newRoom])
     setCurrentRoomId(newRoom.id)
     socket.emit(SOCKET_EVENTS.CREATE_ROOM, newRoom)
-
-    if (connected) {
-      socket.emit(SOCKET_EVENTS.JOIN_ROOM, newRoom.id)
-    }
   }
 
   function handleSendMessage(text) {
