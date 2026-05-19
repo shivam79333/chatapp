@@ -1,6 +1,4 @@
 import { SOCKET_EVENTS } from '../../../shared/constants/events.js'
-import { createMessageService } from '../services/message.service.js'
-import { createRoomService } from '../services/room.service.js'
 
 const rooms = new Map([
   ['general', { id: 'general', name: 'General', description: 'Default room' }],
@@ -19,8 +17,6 @@ function joinOnlyRoom(socket, roomId) {
 }
 
 export function registerSocketHandlers(io) {
-  const messageService = createMessageService()
-  const roomService = createRoomService()
   const userTyping = new Map()
   const userSockets = new Map()
 
@@ -62,32 +58,11 @@ export function registerSocketHandlers(io) {
         currentRoom: roomId,
       })
 
-      try {
-        await roomService.addUserToRoom(
-          roomId,
-          userId,
-          userName,
-          userDisplayName
-        )
-      } catch (error) {
-        console.error(`Failed to add user to room ${roomId}:`, error)
-      }
-
       socket.emit(SOCKET_EVENTS.ROOM_JOINED, roomId)
       broadcastUserCount(io, roomId)
-
-      try {
-        const messages = await messageService.getRoomMessages(roomId)
-        socket.emit(SOCKET_EVENTS.MESSAGE_HISTORY, {
-          roomId,
-          messages,
-        })
-      } catch (error) {
-        console.error(`Failed to load messages for room ${roomId}:`, error)
-      }
     })
 
-    socket.on(SOCKET_EVENTS.SEND_MESSAGE, async (payload) => {
+    socket.on(SOCKET_EVENTS.SEND_MESSAGE, (payload) => {
       const text = payload?.text?.trim()
       const roomId = payload?.roomId || 'general'
 
@@ -98,20 +73,18 @@ export function registerSocketHandlers(io) {
       const userInfo = userSockets.get(socket.id)
       const senderDisplayName = userInfo?.userDisplayName || payload.sender || 'Guest'
 
-      try {
-        const message = await messageService.saveMessage({
-          text,
-          sender: payload.sender || 'Guest',
-          senderDisplayName,
-          roomId,
-        })
-
-        io.to(roomId).emit(SOCKET_EVENTS.RECEIVE_MESSAGE, message)
-        userTyping.delete(socket.id)
-        io.to(roomId).emit(SOCKET_EVENTS.TYPING_STOP, { userId: socket.id })
-      } catch (error) {
-        console.error(`Failed to save message for room ${roomId}:`, error)
+      const message = {
+        id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        text,
+        sender: payload.sender || 'Guest',
+        senderDisplayName,
+        roomId,
+        createdAt: new Date().toISOString(),
       }
+
+      io.to(roomId).emit(SOCKET_EVENTS.RECEIVE_MESSAGE, message)
+      userTyping.delete(socket.id)
+      io.to(roomId).emit(SOCKET_EVENTS.TYPING_STOP, { userId: socket.id })
     })
 
     socket.on(SOCKET_EVENTS.TYPING_START, (payload) => {
@@ -134,16 +107,6 @@ export function registerSocketHandlers(io) {
       const roomId = payload?.roomId || 'general'
       userTyping.delete(socket.id)
       io.to(roomId).emit(SOCKET_EVENTS.TYPING_STOP, { userId: socket.id })
-    })
-
-    socket.on(SOCKET_EVENTS.GET_USER_ROOMS, async (userId) => {
-      try {
-        const userRooms = await roomService.getUserRooms(userId)
-        socket.emit(SOCKET_EVENTS.USER_ROOMS, userRooms)
-      } catch (error) {
-        console.error(`Failed to get rooms for user ${userId}:`, error)
-        socket.emit(SOCKET_EVENTS.USER_ROOMS, [])
-      }
     })
 
     socket.on(SOCKET_EVENTS.DISCONNECT, () => {
