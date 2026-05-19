@@ -26,7 +26,9 @@ export default function SignUpPage({ onSwitchToLogin }) {
     setLoading(true);
 
     try {
-      await signUp(email, password, displayName);
+      // Extract first name only from displayName
+      const firstName = displayName.trim().split(/\s+/)[0] || '';
+      await signUp(email, password, firstName);
     } catch (err) {
       setError(err.message || "Failed to create account");
     } finally {
@@ -56,7 +58,7 @@ export default function SignUpPage({ onSwitchToLogin }) {
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="John Doe"
+              placeholder="John (first name will be used)"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
