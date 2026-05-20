@@ -5,6 +5,8 @@ import {
   sendPasswordResetEmail,
   updateProfile,
   onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
 import { auth } from "./firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
@@ -14,6 +16,12 @@ import { db } from "./firebase";
 if (!auth) {
   console.error("❌ Firebase Auth is not initialized. Check your .env file credentials.");
 }
+
+// Google Auth Provider
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  prompt: "select_account",
+});
 
 // Sign up with email and password
 export const signUp = async (email, password, displayName) => {
@@ -62,6 +70,39 @@ export const signIn = async (email, password) => {
     return userCredential.user;
   } catch (error) {
     console.error("Error signing in:", error);
+    throw error;
+  }
+};
+
+// Sign in with Google
+export const signInWithGoogle = async () => {
+  try {
+    if (!auth) {
+      throw new Error("Firebase is not initialized. Please check your .env file.");
+    }
+
+    const result = await signInWithPopup(auth, googleProvider);
+    const user = result.user;
+
+    // Save/update user in Firestore
+    if (db) {
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || "",
+          photoURL: user.photoURL || "",
+          updatedAt: new Date(),
+          createdAt: new Date(),
+        },
+        { merge: true }
+      );
+    }
+
+    return user;
+  } catch (error) {
+    console.error("Error signing in with Google:", error);
     throw error;
   }
 };

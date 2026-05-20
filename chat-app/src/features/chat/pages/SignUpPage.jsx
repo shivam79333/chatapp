@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { signUp } from "../../../lib/authService";
+import { signUp, signInWithGoogle } from "../../../lib/authService";
 
 export default function SignUpPage({ onSwitchToLogin }) {
   const [email, setEmail] = useState("");
@@ -31,6 +31,19 @@ export default function SignUpPage({ onSwitchToLogin }) {
       await signUp(email, password, firstName);
     } catch (err) {
       setError(err.message || "Failed to create account");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setError("");
+      setLoading(true);
+
+      await signInWithGoogle();
+    } catch (err) {
+      setError(err.message || "Google sign-up failed");
     } finally {
       setLoading(false);
     }
@@ -111,6 +124,14 @@ export default function SignUpPage({ onSwitchToLogin }) {
             className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
           >
             {loading ? "Creating account..." : "Sign Up"}
+          </button>
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            className="w-full bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold py-2 px-4 rounded-lg transition duration-200 mt-3"
+          >
+            Continue with Google
           </button>
         </form>
 

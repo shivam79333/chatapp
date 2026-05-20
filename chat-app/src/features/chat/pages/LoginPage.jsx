@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { signIn } from "../../../lib/authService";
+import { signIn, signInWithGoogle } from "../../../lib/authService";
 
 export default function LoginPage({ onSwitchToSignUp }) {
   const [email, setEmail] = useState("");
@@ -16,6 +16,19 @@ export default function LoginPage({ onSwitchToSignUp }) {
       await signIn(email, password);
     } catch (err) {
       setError(err.message || "Failed to sign in");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setError("");
+      setLoading(true);
+
+      await signInWithGoogle();
+    } catch (err) {
+      setError(err.message || "Google sign-in failed");
     } finally {
       setLoading(false);
     }
@@ -69,6 +82,14 @@ export default function LoginPage({ onSwitchToSignUp }) {
             className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
           >
             {loading ? "Signing in..." : "Sign In"}
+          </button>
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            className="w-full bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold py-2 px-4 rounded-lg transition duration-200 mt-3"
+          >
+            Continue with Google
           </button>
         </form>
 
