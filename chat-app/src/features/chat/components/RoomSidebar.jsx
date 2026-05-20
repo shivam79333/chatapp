@@ -82,8 +82,8 @@ function RoomSidebar({
         <input
           className="min-w-0 rounded-md border border-zinc-700 bg-[#1e1f22] px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-indigo-400"
           aria-label="New room name"
-          onChange={(event) => setRoomName(event.target.value)}
-          placeholder="Create room"
+            onChange={(event) => setRoomName(event.target.value)}
+            placeholder="Enter room name"
           type="text"
           value={roomName}
         />
@@ -92,7 +92,7 @@ function RoomSidebar({
           disabled={!roomName.trim()}
           type="submit"
         >
-          Create Room
+          Join/Create Room
         </button>
       </form>
 

@@ -18,9 +18,6 @@ function MessageList({ messages, room, typingUsers }) {
           <h2 className="text-xl font-bold text-white sm:text-2xl">
             Welcome to #{room.name.toLowerCase()}
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-            Messages in this room are synced in real time and stored in Firestore.
-          </p>
         </div>
 
         {messages.map((message) => (
